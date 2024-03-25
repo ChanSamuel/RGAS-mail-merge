@@ -1,54 +1,28 @@
 
 /**
- * Creates a draft email using the Gmail API and MIMEText library.
- * This is neccessary since GmailApp does not support creation of drafts with new unicode characters (emojis, etc).
+ * Check if the Email Sent column exists, if not then create it.
  */
-function createDraftWithGmailAPI(recipientAddr, subject, textMsg, htmlMsg, senderName=Session.getActiveUser().getEmail(), senderAddr=Session.getActiveUser().getEmail(), attachments=[]) {
-    const { message } = MimeText;
-    message.setSender({
-      name: senderName,
-      addr: senderAddr,
-    });
-  
-    const me = Session.getActiveUser().getEmail();
-  
-    message.setRecipient(recipientAddr);
-    message.setSubject(subject);
-    message.setMessage(textMsg, 'text/plain');
-    message.setMessage(htmlMsg, 'text/html');
-    message.setAttachments(attachments);
-  
-    const raw = message.asEncoded();
-    Gmail.Users.Drafts.create({ message: { raw: raw } }, me);
+function createEmailSentColsIfNotExists() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheets()[0];
+  const headerRow = sheet.getRange("1:1");
+  // Check if the Email Sent column exists. If so, return, otherwise, set it.
+  if (headerRow.getDisplayValues()[0].includes(options["emailSentCol"])) {
+    return;
   }
-  
-  function getColumnValuesByName(colName, ignoreEmptyValues=true, unique=true) {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-    const data = sheet.getRange("A1:1").getValues();
-    const col = data[0].indexOf(colName);
-    if (col != -1) {
-      var vals = sheet.getRange(2,col+1,sheet.getMaxRows()).getValues();
-      vals = vals.map((e) => e[0]); // Convert from 2D array of 1 elements, to a 1D array of 'n' elements.
-      if (ignoreEmptyValues) {
-        vals = vals.filter((e) => e !== ""); // Remove empty strings.
-      }
-      if (unique) { // https://stackoverflow.com/questions/2218999/how-to-remove-all-duplicates-from-an-array-of-objects
-        vals = [...new Set(vals)];
-      }
-      return vals;
-    }
-    throw Error(`Column ${colName} not found in active spreadsheet`);
+
+  // Set the cell in the next empty column with the Email Sent column name.
+  const headerValues = headerRow.getDisplayValues()[0];
+  // Loop through and find the next empty column. Assume it to be the last column plus one, by default.
+  const lastCol = headerValues.length;
+  var nextEmptyCol = lastCol + 1;
+  for (let i = 0; i < headerValues.length; i++) {
+    if (headerValues[i] === "") {
+      nextEmptyCol = i + 1;
+      break;
+    } 
   }
-  
-  function getColumnNames(ignoreEmptyHeaders=true) {
-    const sheet = SpreadsheetApp.getActiveSheet();
-    const dataRange = sheet.getDataRange();
-    const data = dataRange.getDisplayValues();
-    const heads = data.shift(); // Assumes row 1 contains our column headings
-    if (ignoreEmptyHeaders) {
-      return heads.filter((e) => e != null);
-    }
-    return heads;
-  }
-  
-  
+  const cell = sheet.getRange(1, nextEmptyCol);
+  cell.setValue(options["emailSentCol"]);
+}
+
