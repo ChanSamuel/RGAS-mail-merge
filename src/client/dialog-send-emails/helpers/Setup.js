@@ -1,7 +1,7 @@
 /**
- * Set the options given by the 'MM Config' sheet.
+ * Set the options given by the form submission object.
  */
-function setOptionsFromConfigSheet() {
+function setOptionsFromFormObject(formObj) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName("MM Config");
     // Assume columns will always be in that order.
