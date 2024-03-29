@@ -1,41 +1,5 @@
 import { createDraftWithGmailAPI, getGmailTemplateFromDrafts } from "./helpers/gmail";
 
-/**
- * Fill template string with data object
- * @see https://stackoverflow.com/a/378000/1027723
- * @param {string} template string containing {{}} markers which are replaced with data
- * @param {object} data object used to replace {{}} markers
- * @return {object} message replaced with data
- */
-function fillInTemplateFromObject_(template, data) {
-  // We have two templates one for plain text and the html body
-  // Stringifing the object means we can do a global replace
-  let template_string = JSON.stringify(template);
-
-  // Token replacement
-  template_string = template_string.replace(/{{[^{}]+}}/g, key => {
-    return escapeData_(data[key.replace(/[{}]+/g, "")] || "");
-  });
-  return  JSON.parse(template_string);
-}
-
-/**
- * Escape cell data to make JSON safe
- * @see https://stackoverflow.com/a/9204218/1027723
- * @param {string} str to escape JSON special characters from
- * @return {string} escaped string
-*/
-function escapeData_(str) {
-  return str
-    .replace(/[\\]/g, '\\\\')
-    .replace(/[\"]/g, '\\\"')
-    .replace(/[\/]/g, '\\/')
-    .replace(/[\b]/g, '\\b')
-    .replace(/[\f]/g, '\\f')
-    .replace(/[\n]/g, '\\n')
-    .replace(/[\r]/g, '\\r')
-    .replace(/[\t]/g, '\\t');
-}
 
 export interface MassSendConfig {
   recipientCol: string,
@@ -46,12 +10,12 @@ export interface MassSendConfig {
 };
 
 /**
- * Creates a MailMerge
- * @param options 
- * @param isDraft 
- * @param sheet 
+ * Fetches the template from the given draft, fills in the template with appropriate column values, and sends the email (or creates a draft).
+ * @param options The configuration options.
+ * @param isDraft Whether to create a draft or send an email.
+ * @param sheet The sheet to look for values from. Uses the active sheet by default.
  */
-function sendEmails(options: MassSendConfig, isDraft=true, sheet=SpreadsheetApp.getActiveSheet()) {
+export function sendEmail(options: MassSendConfig, isDraft=true, sheet=SpreadsheetApp.getActiveSheet()) {
   // Gets the data from the passed sheet
   const dataRange = sheet.getDataRange();
   // Fetches displayed values for each row in the Range HT Andrew Roberts 
@@ -71,62 +35,45 @@ function sendEmails(options: MassSendConfig, isDraft=true, sheet=SpreadsheetApp.
   // For a pretty version, see https://mashe.hawksey.info/?p=17869/#comment-184945
   const obj = data.map(r => (heads.reduce((o, k, i) => (o[k] = r[i] || '', o), {})));
 
-  // Creates an array to record sent emails
+  // Creates an array to record sent emails.
+  // This array gets written out to the sheet only once the email has been sent.
   const out = [];
 
-  // Loops through all the rows of data
-  obj.forEach(function(row, rowIdx){
-    // Only sends emails if email sent cell is blank and not hidden by a filter
+  // Array to record recipients that we are sending emails to.
+  const recipients = [];
+
+  const emailTemplate = getGmailTemplateFromDrafts(options["templateEmailSubjectLine"]);
+
+  // Record each recipient in the list of recipients, and record the respective 'out' value.
+  obj.forEach((row, rowIdx) => {
     if (row[options["emailSentCol"]] == '') {
-
-      /*
-      // Find the correct Email Template to send based on the class chosen.
-      const classChosenRaw = row[options["classChosenCol"]];
-
-      const classChosen = options["classMapping"][classChosenRaw];
-      // Gets the draft Gmail message to use as a template
-      var emailTemplate = undefined;
-      if (classChosen === "Class 1") {
-        emailTemplate = getGmailTemplateFromDrafts(options["templateSubjectLineClass1"]);
-      } else if (classChosen === "Class 2") {
-        emailTemplate = getGmailTemplateFromDrafts(options["templateSubjectLineClass2"]);
-      } else {
-        throw new Error(`No class mapping found for ${classChosenRaw}`);
-      }
-      */
-      const emailTemplate = getGmailTemplateFromDrafts(options["templateEmailSubjectLine"]);
-
-      const msgObj = fillInTemplateFromObject_(emailTemplate.message, row);
-
-      if (isDraft) {
-        createDraftWithGmailAPI(row[options["recipientCol"]], options["confirmationEmailSubjectLine"], msgObj.text, msgObj.html, emailTemplate.attachments);
-        
-        // Draft is created, so write back whatever was there originally.
-        out.push([row[options["emailSentCol"]]]);
-      } else {
-        // See https://developers.google.com/apps-script/reference/gmail/gmail-app#sendEmail(String,String,String,Object)
-        // If you need to send emails with unicode/emoji characters change GmailApp for MailApp
-        // Uncomment advanced parameters as needed (see docs for limitations)
-        MailApp.sendEmail(row[options["recipientCol"]], options["confirmationEmailSubjectLine"], msgObj.text, {
-          htmlBody: msgObj.html,
-          // bcc: 'a.bcc@email.com',
-          // cc: 'a.cc@email.com',
-          // from: 'an.alias@email.com',
-          // name: 'name of the sender',
-          // replyTo: 'a.reply@email.com',
-          // noReply: true, // if the email should be sent from a generic no-reply email address (not available to gmail.com users)
-          attachments: emailTemplate.attachments,
-          inlineImages: emailTemplate.inlineImages
-        });
-        // Email was sent, so edit cell to record email sent date.
-        out.push([new Date().toDateString()]);
-      }
+      // Add this recipient to the list of recipients we want to send our email to.
+      recipients.push(row[options["recipientCol"]]);
+      // Email was sent, so cell should record the email sent date.
+      out.push([new Date().toDateString()]);
     } else {
-      // Email sent is already present, so write back whatever was there originally.
+      // Email sent is already present, so cell should have whatever was there originally.
       out.push([row[options["emailSentCol"]]]);
     }
   });
+
+  if (isDraft) {
+    createDraftWithGmailAPI(recipients, options["confirmationEmailSubjectLine"], emailTemplate.message.text,emailTemplate.message.html, emailTemplate.attachments);
+  } else {
+    const recipientString = recipients.join(","); // Join the recipients into a comma-separated string of recipients.
+    MailApp.sendEmail(recipientString, options["confirmationEmailSubjectLine"], emailTemplate.message.text, {
+      htmlBody: emailTemplate.message.html,
+      // bcc: 'a.bcc@email.com',
+      // cc: 'a.cc@email.com',
+      // from: 'an.alias@email.com',
+      // name: 'name of the sender',
+      // replyTo: 'a.reply@email.com',
+      // noReply: true, // if the email should be sent from a generic no-reply email address (not available to gmail.com users)
+      attachments: emailTemplate.attachments,
+      inlineImages: emailTemplate.inlineImages
+    });
+  }
   
-  // Update the 'Email Sent' column.
+  // Update the 'Email Sent' column with the 'out' values to mark the emails as sent.
   sheet.getRange(2, emailSentColIdx+1, out.length).setValues(out);
 }

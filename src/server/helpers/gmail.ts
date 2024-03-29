@@ -17,7 +17,7 @@ function subjectFilter_(subjectLine){
  * Creates a draft email using the Gmail API and MIMEText library.
  * This is neccessary since GmailApp does not support creation of drafts with new unicode characters (emojis, etc).
  * 
- * @param recipientAddr The email address of the recipient.
+ * @param recipientAddr The email address of the recipient. If multiple recipients, pass a string[].
  * @param subject The subject line of the email.
  * @param textMsg The message to send in pure text format.
  * @param htmlMsg The message to send in html format.
@@ -25,7 +25,7 @@ function subjectFilter_(subjectLine){
  * @param senderAddr The address of the sender (defaults to GAS active user's email)
  * @param attachments A list of attachment objects to add.
  */
-export function createDraftWithGmailAPI(recipientAddr: string, subject: string, textMsg: string, htmlMsg: string, attachments: GoogleAppsScript.Gmail.GmailAttachment[], senderName=Session.getActiveUser().getEmail(), senderAddr=Session.getActiveUser().getEmail()) {
+export function createDraftWithGmailAPI(recipientAddr: string | string[], subject: string, textMsg: string, htmlMsg: string, attachments: GoogleAppsScript.Gmail.GmailAttachment[], senderName=Session.getActiveUser().getEmail(), senderAddr=Session.getActiveUser().getEmail()) {
     const message = createMimeMessage();
     message.setSender({
       name: senderName,
@@ -39,17 +39,16 @@ export function createDraftWithGmailAPI(recipientAddr: string, subject: string, 
     message.addMessage({data: textMsg, contentType: 'text/plain'});
     message.addMessage({data: htmlMsg, contentType: 'text/html'});
 
-    // TODO: Implement attachments.
-    /*
+    // Attach all attachments.
     for (let i = 0; i < attachments.length; i++) {
-      const atchmnt = attachments[i];
+      const atch = attachments[i];
       message.addAttachment({
-        filename: atchmnt.filename,
-        contentType: atchmnt.contentType,
-        data: atchmnt.data
+        filename: atch.getName(),
+        contentType: atch.getContentType(),
+        data: atch.getDataAsString()
       });
     }
-    */
+    
   
     const raw = message.asEncoded();
     Gmail.Users.Drafts.create({ message: { raw: raw } }, me);
@@ -61,7 +60,7 @@ export function createDraftWithGmailAPI(recipientAddr: string, subject: string, 
    * @param {string} subjectLine to search for draft message
    * @return {object} containing the subject, plain and html message body and attachments
   */
-export function getGmailTemplateFromDrafts(subjectLine){
+export function getGmailTemplateFromDrafts(subjectLine: string){
   try {
     // get drafts
     const drafts = GmailApp.getDrafts();
