@@ -1,13 +1,15 @@
 
 /**
  * Check if the Email Sent column exists, if not then create it.
+ * 
+ * @param {string} emailSentColumnName Name of the 'Email Sent' column within the sheet.
  */
-function createEmailSentColsIfNotExists() {
+export function createEmailSentColsIfNotExists(emailSentColumnName: string) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheets()[0];
   const headerRow = sheet.getRange("1:1");
   // Check if the Email Sent column exists. If so, return, otherwise, set it.
-  if (headerRow.getDisplayValues()[0].includes(options["emailSentCol"])) {
+  if (headerRow.getDisplayValues()[0].includes(emailSentColumnName)) {
     return;
   }
 
@@ -23,6 +25,6 @@ function createEmailSentColsIfNotExists() {
     } 
   }
   const cell = sheet.getRange(1, nextEmptyCol);
-  cell.setValue(options["emailSentCol"]);
+  cell.setValue(emailSentColumnName);
 }
 

@@ -1,9 +1,9 @@
 import {
   onOpen,
   openSendEmailDialog,
-} from './ui';
+} from "./ui";
 
-import { getSheetsData, addSheet, deleteSheet, setActiveSheet, getColumnValuesByName, getColumnNames } from './helpers/sheets';
+import { getSheetsData, addSheet, deleteSheet, setActiveSheet, getColumnValuesByName, getColumnNames } from "./helpers/sheets";
 
 // Public functions must be exported as named exports
 export {
@@ -13,4 +13,6 @@ export {
   addSheet,
   deleteSheet,
   setActiveSheet,
+  getColumnValuesByName,
+  getColumnNames
 };

@@ -1,10 +1,11 @@
-const getSheets = () => SpreadsheetApp.getActive().getSheets();
+const getSheets_ = () => SpreadsheetApp.getActive().getSheets();
 
-const getActiveSheetName = () => SpreadsheetApp.getActive().getSheetName();
+const getActiveSheetName_ = () => SpreadsheetApp.getActive().getSheetName();
+
 
 export const getSheetsData = () => {
-  const activeSheetName = getActiveSheetName();
-  return getSheets().map((sheet, index) => {
+  const activeSheetName = getActiveSheetName_();
+  return getSheets_().map((sheet, index) => {
     const name = sheet.getName();
     return {
       name,
@@ -20,7 +21,7 @@ export const addSheet = (sheetTitle) => {
 };
 
 export const deleteSheet = (sheetIndex) => {
-  const sheets = getSheets();
+  const sheets = getSheets_();
   SpreadsheetApp.getActive().deleteSheet(sheets[sheetIndex]);
   return getSheetsData();
 };
@@ -30,20 +31,20 @@ export const setActiveSheet = (sheetName) => {
   return getSheetsData();
 };
 
-export const getColumnValuesByName = (colName, ignoreEmptyValues=true, unique=true)  => {
+export const getColumnValuesByName = (colName: string, ignoreEmptyValues=true, unique=true)  => {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
     const data = sheet.getRange("A1:1").getValues();
     const col = data[0].indexOf(colName);
     if (col != -1) {
-      var vals = sheet.getRange(2,col+1,sheet.getMaxRows()).getValues();
-      vals = vals.map((e) => e[0]); // Convert from 2D array of 1 elements, to a 1D array of 'n' elements.
+      const vals = sheet.getRange(2,col+1,sheet.getMaxRows()).getValues();
+      let valsFlat = vals.flat();
       if (ignoreEmptyValues) {
-        vals = vals.filter((e) => e !== ""); // Remove empty strings.
+        valsFlat = valsFlat.filter((e) => e !== ""); // Remove empty strings.
       }
-      if (unique) { // https://stackoverflow.com/questions/2218999/how-to-remove-all-duplicates-from-an-array-of-objects
-        vals = [...new Set(vals)];
+      if (unique) {
+        valsFlat = [...new Set(valsFlat)]; // Remove all duplicate values.
       }
-      return vals;
+      return valsFlat;
     }
     throw Error(`Column ${colName} not found in active spreadsheet`);
 }

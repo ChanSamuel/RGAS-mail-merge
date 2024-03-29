@@ -2,7 +2,9 @@
   "compilerOptions": {
     "types": ["gas-types-detailed"],
     "jsx": "react",
-    "lib": ["es6", "dom", "es2016"],
+    "lib": ["es6", "dom", "es2022"],
+    "target": "es2022",
+    "module": "NodeNext",
     "esModuleInterop": true
   }
 }
