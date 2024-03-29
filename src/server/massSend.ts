@@ -5,6 +5,7 @@ export interface MassSendConfig {
   recipientCol: string,
   emailSentCol: "Email Sent Status",
   confirmationEmailSubjectLine: string,
+  templateEmailSubjectLine: string,
   classChosenCol: string,
   classMapping: Object
 };
@@ -15,7 +16,7 @@ export interface MassSendConfig {
  * @param isDraft Whether to create a draft or send an email.
  * @param sheet The sheet to look for values from. Uses the active sheet by default.
  */
-export function sendEmail(options: MassSendConfig, isDraft=true, sheet=SpreadsheetApp.getActiveSheet()) {
+export function sendMassEmail(options: MassSendConfig, isDraft=true, sheet=SpreadsheetApp.getActiveSheet()) {
   // Gets the data from the passed sheet
   const dataRange = sheet.getDataRange();
   // Fetches displayed values for each row in the Range HT Andrew Roberts 
